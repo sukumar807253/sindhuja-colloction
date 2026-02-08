@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config(); // top of index.js
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
@@ -8,10 +8,11 @@ const centerRoutes = require("./routes/centerRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 
 // ================== SUPABASE CLIENT ==================
-const supabase = createClient(
+const supabase = require('@supabase/supabase-js').createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
 
 // ================== EXPRESS APP ==================
 const app = express();
