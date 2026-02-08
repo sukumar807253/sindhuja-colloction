@@ -18,29 +18,24 @@ const app = express();
 
 // ================== CORS ==================
 const allowedOrigins = [
-  "https://sindhuja-colloction.vercel.app", // frontend prod
-  "http://localhost:5173"                   // frontend dev
+  "https://sindhuja-colloction.vercel.app",
+  "http://localhost:5173"
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (like mobile apps, curl)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = "The CORS policy for this site does not allow access from the specified Origin.";
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
+app.use(cors({
+  origin: function(origin, callback) {
+    // allow requests with no origin (like Postman or mobile apps)
+    if (!origin) return callback(null, true);
 
-// ✅ Handle preflight requests for all routes
-app.options("*", cors());
+    if (!allowedOrigins.includes(origin)) {
+      return callback(new Error("Not allowed by CORS"), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // ================== MIDDLEWARE ==================
 app.use(express.json());
@@ -54,9 +49,7 @@ app.get("/", (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password)
-      return res.status(400).json({ message: "Missing email or password" });
+    if (!email || !password) return res.status(400).json({ message: "Missing email or password" });
 
     const { data: user, error } = await supabase
       .from("users")
@@ -70,11 +63,7 @@ app.post("/api/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Wrong password" });
 
-    res.json({
-      id: user.id,
-      name: user.name,
-      isAdmin: user.isAdmin
-    });
+    res.json({ id: user.id, name: user.name, isAdmin: user.isAdmin });
   } catch (err) {
     console.error("LOGIN ERROR 👉", err);
     res.status(500).json({ message: "Login failed" });
@@ -87,11 +76,7 @@ app.get("/api/members/:centerId", async (req, res) => {
     const { centerId } = req.params;
     const { data, error } = await supabase
       .from("members")
-      .select(`
-        id,
-        name,
-        loans ( id, status )
-      `)
+      .select(`id, name, loans(id, status)`)
       .eq("center_id", centerId);
 
     if (error) throw error;
@@ -100,12 +85,7 @@ app.get("/api/members/:centerId", async (req, res) => {
       .filter(m => m.loans?.some(l => l.status === "CREDITED"))
       .map(m => {
         const loan = m.loans.find(l => l.status === "CREDITED");
-        return {
-          member_id: m.id,
-          name: m.name,
-          loan_id: loan.id,
-          status: loan.status
-        };
+        return { member_id: m.id, name: m.name, loan_id: loan.id, status: loan.status };
       });
 
     res.json(result);
@@ -125,7 +105,6 @@ app.put("/api/centers/:id/activate", async (req, res) => {
       .eq("id", id);
 
     if (error) return res.status(500).json({ message: "Failed to activate center" });
-
     res.json({ success: true, data });
   } catch (err) {
     console.error("ACTIVATE CENTER ERROR 👉", err);
